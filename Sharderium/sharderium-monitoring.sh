@@ -41,13 +41,13 @@ while true; do
                 send_telegram_message "Нода все ще в стані 'stopped' після перезапуску."
             fi
         fi
-    elif [[ "$STATE" != "standby" && "$STATE" != "waiting-for-network" && "$STATE" != "active" ]]; then
-        # Для інших статусів просто надсилаємо повідомлення
-        send_telegram_message "Нода в стані: $STATE"
-    else
-        # Якщо все добре, скидаємо прапорець
+    elif [[ "$STATE" =~ ^(standby|waiting-for-network|active|ready|syncing|selected)$ ]]; then
+        # Якщо нода в одному з допустимих станів
         RESTART=""
         echo "$NAME Нода працює коректно."
+    else
+        # Для всіх інших статусів надсилаємо повідомлення
+        send_telegram_message "Нода в стані: $STATE"
     fi
 
     # Чекаємо 1 годину перед наступним циклом
