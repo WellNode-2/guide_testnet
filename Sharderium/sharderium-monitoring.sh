@@ -1,13 +1,13 @@
 #!/bin/bash
 
-NAME=Sharderium
-TELEGRAM_URL=""
+NAME="Sharderium"
+TELEGRAM_TOKEN=""
 TELEGRAM_CHAT_ID=""
-
+RESTART_STATUS=0
 
 send_telegram_message() {
-    curl -sS $TELEGRAM_URL \
-        -d chat_id=TELEGRAM_CHAT_ID -d parse_mode="Markdown" \
+    curl -sS "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
+        -d chat_id="${TELEGRAM_CHAT_ID}" -d parse_mode="Markdown" \
         -d text="$NAME \`$(hostname -I | sed 's/ .*//;')\`
 $1"
 }
@@ -27,30 +27,19 @@ while true; do
     STATE=$(docker exec -t shardeum-dashboard operator-cli status | awk '/state:/ {print $NF}' | tr -d '[:space:]')
     echo "Отриманий статус: $STATE"
 
-    # Якщо статус не отримано або він "stopped", спробуємо перезапустити ноду
     if [[ -z "$STATE" || "$STATE" == "stopped" ]]; then
-        if [[ -z "$RESTART" ]]; then
-            echo "Спроба перезапустити ноду..."
-            docker exec -i shardeum-dashboard operator-cli start
-            RESTART=1
-        else
-            # Якщо після перезапуску статус знову не отримано або "stopped"
-            if [[ -z "$STATE" ]]; then
-                send_telegram_message "Не вдалося отримати статус ноди після перезапуску."
-            else
-                send_telegram_message "Нода все ще в стані 'stopped' після перезапуску."
-            fi
+        if [[ "$RESTART_STATUS" -eq 1 ]]; then
+            send_telegram_message "Нода все ще в стані 'stopped' після спроби перезапуску."
         fi
+        echo "Спроба перезапустити ноду..."
+        docker exec -i shardeum-dashboard operator-cli start
+        RESTART_STATUS=1
     elif [[ "$STATE" =~ ^(standby|waiting-for-network|active|ready|syncing|selected)$ ]]; then
-        # Якщо нода в одному з допустимих станів
-        RESTART=""
         echo "$NAME Нода працює коректно."
+        RESTART_STATUS=0
     else
-        # Для всіх інших статусів надсилаємо повідомлення
-        send_telegram_message "Нода в стані: $STATE"
+        send_telegram_message "Нода в невідомому стані: $STATE."
     fi
 
-    # Чекаємо 1 годину перед наступним циклом
     sleep 3600
 done
-
