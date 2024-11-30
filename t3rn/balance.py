@@ -52,7 +52,7 @@ def main():
         file_exists = os.path.isfile('balance.csv')
         df.to_csv('balance.csv', mode='a', index=False, header=not file_exists)
 
-        # Виводимо суми для кожної адреси в обраних мережах
+        print("\nЗагальний баланс у мережах, задіяних мостом:")
         for address, total_balance in balance_sums.items():
             print(f"{address}: {total_balance:.8f}")
         
